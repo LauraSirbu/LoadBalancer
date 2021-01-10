@@ -12,6 +12,7 @@ public class Solution {
 		MockLogger logger = new MockLogger();
 		
 		System.out.println("--------------------------Random------------------------------------");
+		
         LoadBalancer randomLoadBalancer = new RandomLoadBalancer(logger);
         
 		String ipAddress = "192.168.0.";           
@@ -30,22 +31,8 @@ public class Solution {
 			System.out.println("Provider: " + p.Id() + " is active " + p.IsActive() + " for "  + p.RemainingLifeTimeSeconds() + " seconds.");
 		}
 		
-		//Heartbeat check
-		ScheduledExecutorService executorServiceRandom = Executors.newSingleThreadScheduledExecutor();
-		executorServiceRandom.scheduleWithFixedDelay(new Runnable() {
-	        @Override
-	        public void run() {
-	        	int waitAttempts = 0;
-	        	while(waitAttempts < 3)
-	        	{
-		        	randomLoadBalancer.Check(20);
-		        	waitAttempts++;
-	        	}
-	        	executorServiceRandom.shutdown();
-	        }
-	    }, 0, 50, TimeUnit.SECONDS);
-		
 		System.out.println("--------------------------RoundRobin------------------------------------");
+		
         LoadBalancer roundRobinLoadBalancer = new RoundRobinLoadBalancer(logger);
         
 		String ipAddressRoundRobin = "193.168.0.";           
@@ -54,10 +41,25 @@ public class Solution {
 			roundRobinLoadBalancer.HandleRequest(ipAddressRoundRobin + String.valueOf(i));
 		}
 		
-		//Read providers(maximum of 10)
-		for(Provider p : roundRobinLoadBalancer.activeProviders)
-		{
-			System.out.println("Provider: " + p.Id() + " is active " + p.IsActive() + " for "  + p.RemainingLifeTimeSeconds() + " seconds.");
-		}
+		//Heartbeat check
+		System.out.println("--------------------------Heartbeat check------------------------------------");
+		
+		int heartbeatCheck = 2;
+		int noOfAttempts = 10;
+		int initialDelaySeconds = 0;
+		int delaySeconds = 20;
+		ScheduledExecutorService executorService = Executors.newSingleThreadScheduledExecutor();
+		executorService.scheduleWithFixedDelay(new Runnable() {
+	        @Override
+	        public void run() {
+	        	int waitAttempts = 0;
+	        	while(waitAttempts < noOfAttempts)
+	        	{
+	        		roundRobinLoadBalancer.Check(heartbeatCheck);
+		        	waitAttempts++;
+	        	}
+	        	executorService.shutdown();
+	        }
+	    }, initialDelaySeconds, delaySeconds, TimeUnit.SECONDS);
 	}
 }
